@@ -1,0 +1,153 @@
+package com.thebook.myapplication
+
+import android.graphics.drawable.Drawable
+import android.net.Uri
+import android.os.Environment
+import androidx.fragment.app.FragmentContainerView
+import androidx.lifecycle.ViewModel
+import java.io.File
+import kotlin.random.Random
+
+class GameModelView: ViewModel() {
+
+    val myAudioMap: MutableMap<String, Uri> = mutableMapOf() //connects sentence string to audio file
+    val myListOfDrawableObjects : MutableList<DrawableObject> = ArrayList(0) // this is the master list of images from the chapter
+    val myBufferListOfLiveDrawableObjects : MutableList<Int> = ArrayList(0) //this is the list of currently active drawable objects
+    val dynamicArrayOfDrawableObjects: MutableList<Int> = ArrayList(0) // this is the working list of images from chapter
+    var currentlySelectedDrawableObject: String? = null //this is the string for the target drawable object
+    var bufferDrawableObject:Int?=null  // this is the readied drawable object taken from the dynamic list
+    var myChapter: String? = null
+    var mySavedStateCheck: Boolean? = null
+    var myTime : String? = null
+    var myClicks = 0
+    var myStartTime:Long? = null
+
+
+
+
+    fun getCurrentUri():Uri?{
+        if(currentlySelectedDrawableObject!=null) {
+            return myAudioMap[currentlySelectedDrawableObject]
+        }
+        else return null
+    }
+
+    //selects a string from currently live drawable objects
+    //stores string as the SELECTED drawable object for target
+    //returns false if not currently live drawable object is available
+    fun selectFromLiveDrawableObjects():Boolean{
+        val myR = Random(System.currentTimeMillis())
+        if(myBufferListOfLiveDrawableObjects.isNullOrEmpty()){return false}
+        val mySize = myBufferListOfLiveDrawableObjects.size
+        val r: Int = myR.nextInt(mySize)
+        val drawableObjectIndex = myBufferListOfLiveDrawableObjects[r]
+        currentlySelectedDrawableObject = myListOfDrawableObjects[drawableObjectIndex].myString
+        return true
+    }
+
+    //adds a drawable object to the buffer of currently live drawable objects
+    //returns the index for that drawable object in the Master List
+    //otherwise returns null
+    fun getDrawableObject(): Int? {
+        if(!readyRandomDrawableObjectFromDynamicArray())return null
+        if (bufferDrawableObject != null) {
+            val temp =  bufferDrawableObject
+            bufferDrawableObject = null
+            myBufferListOfLiveDrawableObjects.add(temp!!)
+            return temp
+        }
+        return null
+    }
+
+
+    //takes a drawable from the list of remaining Drawable Objects
+    //deletes the drawable from the list
+    //places the drawable in the buffer
+    //returns true if drawable in buffer
+    //else returns false
+    fun readyRandomDrawableObjectFromDynamicArray():Boolean {
+        if(dynamicArrayOfDrawableObjects.isNullOrEmpty()) {
+            return false
+        }
+        val myR = Random(System.currentTimeMillis())
+        val mySize = dynamicArrayOfDrawableObjects.size
+        val r: Int = myR.nextInt(mySize)
+        if(!(r >= 0)){return false}
+        bufferDrawableObject = dynamicArrayOfDrawableObjects[r]
+        if(bufferDrawableObject==null)return false
+        dynamicArrayOfDrawableObjects.removeAt(r)
+        //myBufferListOfDrawableObjects.add(myListOfDrawableObjects[DrawableObjectKey!!])
+        return true
+    }
+
+
+
+    fun removeDrawableObjectFromLiveList(fv: FragmentContainerView):Boolean{
+        val mySize = myBufferListOfLiveDrawableObjects.size
+        for(i in 0 until mySize){
+            val temp = myBufferListOfLiveDrawableObjects[i]
+            if(myListOfDrawableObjects[temp].myString == currentlySelectedDrawableObject) {
+                myBufferListOfLiveDrawableObjects.removeAt(i)
+                return true
+            }
+        }
+        return false
+    }
+
+
+
+
+    fun fillAudioMap() {
+        //val myPath = Environment.getExternalStorageDirectory().path + "/Documents/MySounds/" + myChapter + "/"
+        val myPath = Environment.getExternalStorageDirectory().path + "/Music/MySounds/" + myChapter + "/"
+        File(myPath).walkBottomUp().forEach {
+            if (it.isFile) {
+                val u = Uri.parse(it.toString())
+                val s = it.toString().substringAfterLast("/").dropLast(4)
+               myAudioMap[s] = u
+            }
+        }
+    }
+
+    fun getObjectName(i:Int):String{
+        return myListOfDrawableObjects[i].myDrawable.toString()
+    }
+
+
+    fun fillMyArray() {
+  //      val myPath = Environment.getExternalStorageDirectory().path + "/Documents/MyImages/" + myChapter + "/"
+        val myPath = Environment.getExternalStorageDirectory().path + "/Pictures/MyImages/" + myChapter + "/"
+
+        val myList: MutableList<String> = java.util.ArrayList(0)
+        File(myPath).walkBottomUp().forEach {
+            if (it.isFile) {
+                val d = Drawable.createFromPath(it.absolutePath)!!
+                val s = it.toString().substringAfterLast("/").dropLast(4)
+                val myDrawableObject = DrawableObject(d, s)
+                myListOfDrawableObjects.add(myDrawableObject)
+            }
+        }
+        val mySize = myListOfDrawableObjects.size
+        for(i in 0 until mySize){
+            dynamicArrayOfDrawableObjects.add(i)
+        }
+    }
+
+
+    fun clearVariables(){
+
+        myAudioMap.clear()
+        myListOfDrawableObjects.clear()
+        myBufferListOfLiveDrawableObjects.clear()
+        currentlySelectedDrawableObject  = null
+        bufferDrawableObject=null
+        dynamicArrayOfDrawableObjects.clear()
+        myChapter = null
+        mySavedStateCheck = null
+        myTime = null
+        myClicks = 0
+        myStartTime = null
+    }
+
+
+}
